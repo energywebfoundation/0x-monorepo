@@ -9,7 +9,7 @@ import * as _ from 'lodash';
 import { IKyberNetworkContract } from './i_kyber_network';
 import { tokens } from './tokens';
 
-blockchainTests.live.only('ERC20BridgeSampler Mainnet Tests', env => {
+blockchainTests.live('ERC20BridgeSampler Mainnet Tests', env => {
     const ETH_TOKEN = tokens.ETH;
 
     describe('USDT tests', () => {
@@ -26,7 +26,7 @@ blockchainTests.live.only('ERC20BridgeSampler Mainnet Tests', env => {
             );
         });
 
-        it('has decials', async () => {
+        it('has decimals', async () => {
             const decimals = await token.decimals().callAsync({ from: samplerAddress });
             expect(decimals).to.bignumber.eq(6);
         });
@@ -49,13 +49,13 @@ blockchainTests.live.only('ERC20BridgeSampler Mainnet Tests', env => {
 
         it('can get an ETH -> USDT sell quote directly from kyber', async () => {
             const token = tokens.USDT;
-            const amount = new BigNumber(10).pow(token.decimals).times(10);
-            const r = await kyber.getExpectedRate(
+            const amount = new BigNumber(10).pow(ETH_TOKEN.decimals).times(10);
+            const [r] = await kyber.getExpectedRate(
                 '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
                 token.address,
                 amount,
             ).callAsync({ from: samplerAddress });
-            logUtils.log(r);
+            expect(r).to.bignumber.gt(0);
         });
     });
 
@@ -82,9 +82,17 @@ blockchainTests.live.only('ERC20BridgeSampler Mainnet Tests', env => {
 
         it('can get valid ETH -> USDT sell samples from kyber', async () => {
             const token = tokens.USDT;
-            const amount = new BigNumber(10).pow(token.decimals).times(10);
+            const amount = new BigNumber(10).pow(ETH_TOKEN.decimals).times(10);
             const samples = getSampleAmounts(amount);
             const r = await sampler.sampleSellsFromKyberNetwork(ETH_TOKEN.address, token.address, samples).callAsync();
+            expect(_.some(r, v => !v.isZero())).to.be.true();
+        });
+
+        it('can get valid USDT -> ETH sell samples from kyber', async () => {
+            const token = tokens.USDT;
+            const amount = new BigNumber(10).pow(token.decimals).times(10);
+            const samples = getSampleAmounts(amount);
+            const r = await sampler.sampleSellsFromKyberNetwork(token.address, ETH_TOKEN.address, samples).callAsync();
             expect(_.some(r, v => !v.isZero())).to.be.true();
         });
     });
